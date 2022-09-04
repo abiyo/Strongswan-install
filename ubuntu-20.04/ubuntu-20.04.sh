@@ -97,8 +97,10 @@ systemctl enable strongswan-starter
 
 ufw allow OpenSSH && echo "y" | ufw enable && ufw allow 500,4500/udp
 
-ifc=`ip route show default | sed -r 's/.*dev //'`
-ifc=`echo $ifc | sed -r 's/ .+//'`
+#ifc=`ip route show default | sed -r 's/.*dev //'`
+#ifc=`echo $ifc | sed -r 's/ .+//'`
+
+ifc=$(route | grep '^default' | grep -o '[^ ]*$')
 cp /etc/ufw/before.rules /etc/ufw/before.rules.bak
 
 mv /etc/ufw/before.rules{,.temp} && \

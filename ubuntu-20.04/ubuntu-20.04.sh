@@ -30,7 +30,8 @@ apt install -y \
     strongswan \
     strongswan-pki \
     libcharon-extra-plugins \
-    libcharon-extauth-plugins
+    libcharon-extauth-plugins \
+    net-tools
 mkdir -p ~/pki/{cacerts,certs,private}
 
 pki --gen --type rsa --size 4096 --outform pem > ~/pki/private/ca-key.pem

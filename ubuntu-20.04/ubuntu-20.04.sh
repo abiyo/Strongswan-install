@@ -12,30 +12,21 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-
-#ifroute=`ip route show default | sed -r 's/.*via //'`
-#ifroute=`echo $ifip | sed -r 's/ .+//'`
-
-echo "WARNING!"
-echo "Enter an EXTERNAL IP address if it's different from this server. Otherwise enter IP address the current server:"
-#echo "Enter an EXTERNAL IP address if it's different from this server. Press ENTER to use the ip address of this server: "
-read IPAD
-if [[ -z $IPAD ]]; then 
-    IPADDR=$IPAD
-fi
-IPADDR=$IPAD    
-
 apt update -y
 apt install -y \
     strongswan \
     strongswan-pki \
     libcharon-extra-plugins \
     libcharon-extauth-plugins \
-    net-tools
+    net-tools \
+    curl
+
+IPADDR=$(curl -s https://api.ipify.org)
+
 mkdir -p ~/pki/{cacerts,certs,private}
 
 pki --gen --type rsa --size 4096 --outform pem > ~/pki/private/ca-key.pem
-pki --self --ca --lifetime 3650 --in ~/pki/private/ca-key.pem --type rsa --dn "CN=VPN CA" --outform pem > ~/pki/cacerts/ca-cert.pem
+pki --self --ca --lifetime 3650 --in ~/pki/private/ca-key.pem --type rsa --dn "CN=VPN CA $IPADDR" --outform pem > ~/pki/cacerts/ca-cert.pem
 pki --gen --type rsa --size 4096 --outform pem > ~/pki/private/server-key.pem
 pki --pub --in ~/pki/private/server-key.pem --type rsa \
     | pki --issue --lifetime 1825 \
@@ -52,7 +43,7 @@ mv /etc/ipsec.conf{,.original}
 # Config
 echo \
 "config setup
-    charondebug="ike 1, knl 1, cfg 0"
+    charondebug="ike 2, knl 2, cfg 2"
     strictcrlpolicy=no
     uniqueids=no
     cachecrls=no
@@ -98,9 +89,6 @@ systemctl enable strongswan-starter
 
 ufw allow OpenSSH && echo "y" | ufw enable && ufw allow 500,4500/udp
 
-#ifc=`ip route show default | sed -r 's/.*dev //'`
-#ifc=`echo $ifc | sed -r 's/ .+//'`
-
 ifc=$(route | grep '^default' | grep -o '[^ ]*$')
 cp /etc/ufw/before.rules /etc/ufw/before.rules.bak
 
@@ -124,8 +112,6 @@ sed -n 'H;${x;s/^\n//;s/..allow all on loopback.*$/\-A ufw\-before\-forward \-\-
 sed -n 'H;${x;s/^\n//;s/..allow all on loopback.*$/\-A ufw\-before\-forward \-\-match policy \-\-pol ipsec \-\-dir out \-\-proto esp \-d 10.10.10.0\/24 \-j ACCEPT\n&/;p;}' \
     /etc/ufw/before.rules.tmp > /etc/ufw/before.rules && \
 rm -f /etc/ufw/before.rules.tmp
-
-#sed -i '/COMMIT/i -A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d 10.10.10.0/24 -j ACCEPT' /etc/ufw/before.rules
 
 echo \
 "net/ipv4/ip_forward=1

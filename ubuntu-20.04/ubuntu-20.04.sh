@@ -133,3 +133,6 @@ Type - ikev2.
 
 If you use external firewall, you must open ports 500/UDP,4500/UDP.
 "
+
+cat /etc/ipsec.d/cacerts/ca-cert.pem
+cat /etc/ipsec.secrets
